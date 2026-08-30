@@ -10,33 +10,73 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AttackRouteImport } from './routes/attack'
+import { Route as DefenseRouteImport } from './routes/defense'
+import { Route as EvidenceRouteImport } from './routes/evidence'
+import { Route as ProtocolRouteImport } from './routes/protocol'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AttackRoute = AttackRouteImport.update({
+  id: '/attack',
+  path: '/attack',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DefenseRoute = DefenseRouteImport.update({
+  id: '/defense',
+  path: '/defense',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EvidenceRoute = EvidenceRouteImport.update({
+  id: '/evidence',
+  path: '/evidence',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtocolRoute = ProtocolRouteImport.update({
+  id: '/protocol',
+  path: '/protocol',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/attack': typeof AttackRoute
+  '/defense': typeof DefenseRoute
+  '/evidence': typeof EvidenceRoute
+  '/protocol': typeof ProtocolRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/attack': typeof AttackRoute
+  '/defense': typeof DefenseRoute
+  '/evidence': typeof EvidenceRoute
+  '/protocol': typeof ProtocolRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/attack': typeof AttackRoute
+  '/defense': typeof DefenseRoute
+  '/evidence': typeof EvidenceRoute
+  '/protocol': typeof ProtocolRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/attack' | '/defense' | '/evidence' | '/protocol'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/attack' | '/defense' | '/evidence' | '/protocol'
+  id: '__root__' | '/' | '/attack' | '/defense' | '/evidence' | '/protocol'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AttackRoute: typeof AttackRoute
+  DefenseRoute: typeof DefenseRoute
+  EvidenceRoute: typeof EvidenceRoute
+  ProtocolRoute: typeof ProtocolRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +88,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attack': {
+      id: '/attack'
+      path: '/attack'
+      fullPath: '/attack'
+      preLoaderRoute: typeof AttackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/defense': {
+      id: '/defense'
+      path: '/defense'
+      fullPath: '/defense'
+      preLoaderRoute: typeof DefenseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/evidence': {
+      id: '/evidence'
+      path: '/evidence'
+      fullPath: '/evidence'
+      preLoaderRoute: typeof EvidenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/protocol': {
+      id: '/protocol'
+      path: '/protocol'
+      fullPath: '/protocol'
+      preLoaderRoute: typeof ProtocolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AttackRoute: AttackRoute,
+  DefenseRoute: DefenseRoute,
+  EvidenceRoute: EvidenceRoute,
+  ProtocolRoute: ProtocolRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

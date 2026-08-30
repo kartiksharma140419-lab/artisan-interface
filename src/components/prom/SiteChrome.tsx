@@ -36,28 +36,30 @@ export function SiteHeader() {
   const ready = status.data?.ready;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-rule bg-paper/95 backdrop-blur-none">
-      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-8 gap-y-3 px-6 py-3">
-        <Link to="/" className="flex items-baseline gap-2">
-          <span className="font-display text-xl leading-none">Prometheus</span>
-          <Mono className="text-muted-foreground">fraud twin</Mono>
-        </Link>
+    <header className="sticky top-0 z-40 border-b border-rule bg-paper/90 backdrop-blur-md">
+      <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-x-6 gap-y-2.5 px-4 sm:px-6 py-2.5 sm:py-3">
+        <div className="flex items-center gap-4 sm:gap-8 overflow-x-auto no-scrollbar py-0.5">
+          <Link to="/" className="flex items-baseline gap-2 shrink-0">
+            <span className="font-display text-xl leading-none text-white">Prometheus</span>
+            <Mono className="text-white/60 text-[11px] hidden sm:inline">fraud twin</Mono>
+          </Link>
 
-        <nav className="flex flex-wrap items-center gap-x-5 gap-y-1">
-          {NAV.map((n) => (
-            <Link
-              key={n.to}
-              to={n.to}
-              className="font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground transition-colors duration-200 hover:text-ink"
-              activeProps={{ className: "text-ink" }}
-              activeOptions={{ exact: n.to === "/" }}
-            >
-              {n.label}
-            </Link>
-          ))}
-        </nav>
+          <nav className="flex items-center gap-x-4 sm:gap-x-6 shrink-0">
+            {NAV.map((n) => (
+              <Link
+                key={n.to}
+                to={n.to}
+                className="font-mono text-[10px] sm:text-[11px] uppercase tracking-[0.14em] text-white/70 transition-colors duration-200 hover:text-white"
+                activeProps={{ className: "text-white font-semibold underline underline-offset-4 decoration-defense" }}
+                activeOptions={{ exact: n.to === "/" }}
+              >
+                {n.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <Tag tone={ready ? "defense" : status.error ? "attack" : "warn"}>
             {status.isLoading
               ? "checking"
@@ -67,18 +69,18 @@ export function SiteHeader() {
                   ? "twin ready"
                   : "not initialised"}
           </Tag>
-          <Button onClick={runInit} disabled={initializing}>
-            {initializing ? "building twin…" : "Run /api/init"}
+          <Button onClick={runInit} disabled={initializing} className="text-[10px] sm:text-[11px] px-2.5 sm:px-3 py-1.5 sm:py-2">
+            {initializing ? "building…" : "Run /api/init"}
           </Button>
         </div>
       </div>
       {initNote ? (
-        <p className="mx-auto max-w-[1400px] px-6 pb-2 font-mono text-[11px] text-muted-foreground">
+        <p className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2 font-mono text-[11px] text-muted-foreground">
           {initNote}
         </p>
       ) : null}
       {status.error ? (
-        <p className="mx-auto max-w-[1400px] px-6 pb-2 font-mono text-[11px] text-muted-foreground">
+        <p className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2 font-mono text-[11px] text-muted-foreground">
           No backend at {API_BASE} — set VITE_API_BASE_URL to point elsewhere.
         </p>
       ) : null}

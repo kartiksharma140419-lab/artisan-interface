@@ -45,58 +45,58 @@ export function AmbientStrip() {
   const path = sparkline(points, 320, 26);
 
   return (
-    <div className="border-y border-rule bg-card/40">
-      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-8 gap-y-3 px-6 py-3">
-        <div className="flex items-center gap-3">
+    <div className="border-y border-white/14 bg-black/75 backdrop-blur-md overflow-hidden">
+      <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-x-4 sm:gap-x-8 gap-y-2.5 px-4 sm:px-6 py-2.5 sm:py-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <span
-            className="inline-block h-1.5 w-1.5"
+            className="inline-block h-2 w-2 rounded-full shrink-0"
             style={{
               backgroundColor:
                 state === "live"
                   ? "var(--color-defense)"
                   : state === "error"
                     ? "var(--color-attack)"
-                    : "var(--color-muted-foreground)",
+                    : "rgba(255, 255, 255, 0.4)",
             }}
           />
-          <Mono className="text-muted-foreground">
-            ambient stream · {state === "error" ? "no connection" : state}
+          <Mono className="text-white/80 font-medium text-[11px] sm:text-xs">
+            stream · {state === "error" ? "offline" : state}
           </Mono>
         </div>
 
-        <svg width="320" height="26" className="shrink-0" aria-hidden>
-          <line x1="0" y1="25.5" x2="320" y2="25.5" stroke="var(--color-rule)" strokeWidth="1" />
+        <svg width="200" height="24" className="shrink-0 hidden md:block" aria-hidden>
+          <line x1="0" y1="23.5" x2="200" y2="23.5" stroke="rgba(255, 255, 255, 0.15)" strokeWidth="1" />
           {path ? (
-            <path d={path} fill="none" stroke="var(--color-attack)" strokeWidth="1" />
+            <path d={path} fill="none" stroke="var(--color-attack)" strokeWidth="1.5" />
           ) : null}
         </svg>
 
-        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
-          <Mono className="text-muted-foreground">
-            step <span className="text-ink">{last ? `${last.step}/${last.steps}` : "—"}</span>
+        <div className="flex flex-wrap items-baseline gap-x-4 sm:gap-x-6 gap-y-1 text-xs">
+          <Mono className="text-white/70 text-[11px] sm:text-xs">
+            step <span className="text-white font-semibold">{last ? `${last.step}/${last.steps}` : "—"}</span>
           </Mono>
-          <Mono className="text-muted-foreground">
-            normal <span className="text-ink tabular-nums">{last?.normal ?? "—"}</span>
+          <Mono className="text-white/70 text-[11px] sm:text-xs">
+            normal <span className="text-white font-semibold tabular-nums">{last?.normal ?? "—"}</span>
           </Mono>
-          <Mono className="text-muted-foreground">
-            fraud <span className="text-attack tabular-nums">{last?.fraud ?? "—"}</span>
+          <Mono className="text-white/70 text-[11px] sm:text-xs">
+            fraud <span className="text-attack font-semibold tabular-nums">{last?.fraud ?? "—"}</span>
           </Mono>
-          <Mono className="text-muted-foreground">
-            caught <span className="text-defense tabular-nums">{last?.caught ?? "—"}</span>
+          <Mono className="text-white/70 text-[11px] sm:text-xs">
+            caught <span className="text-defense font-semibold tabular-nums">{last?.caught ?? "—"}</span>
           </Mono>
-          <Mono className="text-muted-foreground">
+          <Mono className="text-white/70 text-[11px] sm:text-xs">
             peak{" "}
-            <span className="text-ink tabular-nums">
+            <span className="text-white font-semibold tabular-nums">
               {last ? last.peak_score.toFixed(2) : "—"}
             </span>
           </Mono>
           {attack ? <Tag tone="attack">{attack}</Tag> : null}
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
-          <Mono className="text-muted-foreground">inject</Mono>
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <Mono className="text-white/80 font-semibold text-[10px] sm:text-xs">inject</Mono>
           {["A1", "A3", "A4", "A6"].map((a) => (
-            <Button key={a} tone="attack" onClick={() => void apiInject(a)}>
+            <Button key={a} tone="attack" onClick={() => void apiInject(a)} className="text-[10px] px-2 py-1">
               {a}
             </Button>
           ))}

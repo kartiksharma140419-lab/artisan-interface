@@ -58,17 +58,17 @@ export function Stat({
 }) {
   const toneClass =
     tone === "attack"
-      ? "text-attack"
+      ? "text-attack font-bold"
       : tone === "defense"
-        ? "text-defense"
+        ? "text-defense font-bold"
         : tone === "muted"
           ? "text-muted-foreground"
-          : "text-ink";
+          : "text-white font-bold";
   return (
-    <div className="border-l border-rule pl-3">
-      <p className="label">{label}</p>
-      <p className={cn("mt-1 font-mono text-xl tabular-nums", toneClass)}>{value}</p>
-      {hint ? <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p> : null}
+    <div className="border-l border-rule pl-3 py-0.5">
+      <p className="label text-white/80">{label}</p>
+      <p className={cn("mt-1 font-mono text-xl tabular-nums text-white", toneClass)}>{value}</p>
+      {hint ? <p className="mt-0.5 text-xs text-white/70">{hint}</p> : null}
     </div>
   );
 }
@@ -90,17 +90,17 @@ export function Button({
 }) {
   const toneClass =
     tone === "attack"
-      ? "border-attack text-attack hover:bg-attack hover:text-ink"
+      ? "border-attack/80 text-attack bg-attack/10 hover:bg-attack hover:text-white"
       : tone === "defense"
-        ? "border-defense text-defense hover:bg-defense hover:text-ink"
-        : "border-rule text-ink hover:bg-accent";
+        ? "border-defense/80 text-defense bg-defense/10 hover:bg-defense hover:text-white"
+        : "border-white/20 text-white bg-black/40 hover:bg-white/10 hover:border-white/40";
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "font-mono text-[11px] uppercase tracking-[0.14em] border px-3 py-2 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40",
+        "font-mono text-[11px] uppercase tracking-[0.14em] font-medium border px-3 py-2 transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-40 backdrop-blur-sm",
         toneClass,
         className,
       )}
@@ -171,16 +171,16 @@ export function Tag({
 }) {
   const toneClass =
     tone === "attack"
-      ? "border-attack text-attack"
+      ? "border-attack text-attack bg-attack/10"
       : tone === "defense"
-        ? "border-defense text-defense"
+        ? "border-defense text-defense bg-defense/10"
         : tone === "warn"
-          ? "border-warn text-warn"
-          : "border-rule text-muted-foreground";
+          ? "border-warn text-warn bg-warn/10"
+          : "border-white/20 text-white/90 bg-black/60";
   return (
     <span
       className={cn(
-        "inline-block border px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em]",
+        "inline-block border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] font-medium backdrop-blur-sm",
         toneClass,
       )}
     >
