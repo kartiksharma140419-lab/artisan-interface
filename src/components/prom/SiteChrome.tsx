@@ -67,30 +67,51 @@ export function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <Tag tone={ready ? "defense" : status.error ? "attack" : "warn"}>
-            {status.isLoading
-              ? "checking"
-              : status.error
-                ? "backend offline"
+          <Tag
+            tone={
+              health.phase === "offline" || status.error
+                ? "attack"
                 : ready
-                  ? "twin ready"
-                  : "not initialised"}
+                  ? "defense"
+                  : "warn"
+            }
+          >
+            {health.phase === "checking"
+              ? "checking"
+              : health.phase === "waking"
+                ? "waking engine…"
+                : health.phase === "offline"
+                  ? "backend offline"
+                  : status.isLoading
+                    ? "checking"
+                    : status.error
+                      ? "backend error"
+                      : ready
+                        ? "twin ready"
+                        : "not initialised"}
           </Tag>
           <Button onClick={runInit} disabled={initializing} className="text-[10px] sm:text-[11px] px-2.5 sm:px-3 py-1.5 sm:py-2">
             {initializing ? "building…" : "Run /api/init"}
           </Button>
         </div>
       </div>
+      {health.phase === "waking" ? (
+        <p className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2 font-mono text-[11px] text-muted-foreground">
+          Backend is spinning up from cold start — this can take up to a minute on the first
+          load. Nothing is broken.
+        </p>
+      ) : null}
       {initNote ? (
         <p className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2 font-mono text-[11px] text-muted-foreground">
           {initNote}
         </p>
       ) : null}
-      {status.error ? (
+      {health.phase === "offline" || status.error ? (
         <p className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2 font-mono text-[11px] text-muted-foreground">
-          No backend at {API_BASE} — set VITE_API_BASE_URL to point elsewhere.
+          No backend at {API_BASE} — {health.error ?? status.error?.message}
         </p>
       ) : null}
+
     </header>
   );
 }
