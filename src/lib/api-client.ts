@@ -35,8 +35,9 @@ export async function apiFetch<T>(path: string, opts: FetchOpts = {}): Promise<T
       method,
       // No credentials: the backend allows origin "*", and "*" + credentials is
       // rejected by browsers outright. There is no auth layer to carry.
-      headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      ...(body !== undefined
+        ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+        : {}),
       signal: controller.signal,
     });
   } catch (err) {
@@ -82,23 +83,29 @@ export async function apiFetch<T>(path: string, opts: FetchOpts = {}): Promise<T
 
 /* ---------- cold-start pre-warm ---------- */
 
+/**
+ * This deployment exposes no /healthz (it 404s); /api/status is the cheapest
+ * always-available liveness read and doubles as the warm-up ping.
+ */
+const HEALTH_PATH = "/api/status";
+
 export interface HealthResult {
   ok: boolean;
   retried: boolean;
 }
 
 /**
- * GET /healthz. Cold start looks like a timeout, so retry exactly once before
+ * Liveness / pre-warm probe. Cold start looks like a timeout, so retry exactly once before
  * reporting failure. Never blocks the UI — callers fire this in the background.
  */
 export async function apiHealthz(onWaking?: () => void): Promise<HealthResult> {
   try {
-    await apiFetch<unknown>("/healthz", { timeoutMs: TIMEOUT.health });
+    await apiFetch<unknown>(HEALTH_PATH, { timeoutMs: TIMEOUT.health });
     return { ok: true, retried: false };
   } catch (err) {
     if (err instanceof ApiError && err.coldStart) {
       onWaking?.();
-      await apiFetch<unknown>("/healthz", { timeoutMs: 60_000 });
+      await apiFetch<unknown>(HEALTH_PATH, { timeoutMs: 60_000 });
       return { ok: true, retried: true };
     }
     throw err;
