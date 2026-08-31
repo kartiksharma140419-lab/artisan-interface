@@ -54,6 +54,13 @@ export function SiteHeader() {
 
   const statusDisplay = getStatusDisplay();
 
+  const errorMessage =
+    health.error instanceof Error
+      ? health.error.message
+      : typeof health.error === "string"
+        ? health.error
+        : null;
+
   return (
     <header className="sticky top-0 z-40 border-b border-rule bg-paper/90 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-x-6 gap-y-2.5 px-4 sm:px-6 py-2.5 sm:py-3">
@@ -102,9 +109,9 @@ export function SiteHeader() {
         </p>
       ) : null}
 
-      {health.state === "offline" && health.error ? (
+      {health.state === "offline" && errorMessage ? (
         <p className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2 font-mono text-[11px] text-attack">
-          Backend unreachable at {health.baseUrl} ({health.error.message}) — set VITE_API_BASE_URL to point elsewhere.
+          Backend unreachable at {health.baseUrl} ({errorMessage}) — set VITE_API_BASE_URL to point elsewhere.
         </p>
       ) : null}
     </header>

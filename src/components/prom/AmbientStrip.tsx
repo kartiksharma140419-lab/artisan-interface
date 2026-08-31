@@ -56,6 +56,7 @@ export function AmbientStrip() {
     return () => {
       clearTimeout(silenceTimer);
       es.close();
+      esRef.current = null;
     };
   }, []);
 

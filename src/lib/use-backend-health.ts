@@ -4,12 +4,14 @@ import { ApiError, apiFetch } from "./api-client";
 import type { StatusResponse } from "./api";
 
 export type BackendHealthState = "checking" | "waking" | "ready" | "uninitialized" | "offline";
+export type BackendPhase = "checking" | "waking" | "ready" | "offline";
 
 export interface BackendHealth {
   state: BackendHealthState;
+  phase: BackendHealthState;
   ready: boolean;
   status: StatusResponse | null;
-  error: ApiError | Error | null;
+  error: ApiError | Error | string | null;
   baseUrl: string;
   wakingSeconds: number;
   refetch: () => Promise<void>;
@@ -18,7 +20,7 @@ export interface BackendHealth {
 export function useBackendHealth(): BackendHealth {
   const [state, setState] = useState<BackendHealthState>("checking");
   const [status, setStatus] = useState<StatusResponse | null>(null);
-  const [error, setError] = useState<ApiError | Error | null>(null);
+  const [error, setError] = useState<ApiError | Error | string | null>(null);
   const [wakingSeconds, setWakingSeconds] = useState(0);
 
   const checkHealth = useCallback(async () => {
@@ -36,9 +38,9 @@ export function useBackendHealth(): BackendHealth {
       return;
     } catch (err: unknown) {
       const apiErr = err instanceof ApiError ? err : new ApiError(String(err), 0);
-      
+
       // If error indicates a cold start, transition to waking state and retry with 60s timeout
-      if (apiErr.isColdStart) {
+      if (apiErr.isColdStart || apiErr.coldStart) {
         setState("waking");
         setError(apiErr);
 
@@ -84,6 +86,7 @@ export function useBackendHealth(): BackendHealth {
 
   return {
     state,
+    phase: state,
     ready: state === "ready",
     status,
     error,

@@ -84,7 +84,7 @@ function OverviewPage() {
               <Stat
                 label="simulation status"
                 value={status.data?.ready ? "Active" : "Uninitialized"}
-                tone={status.data?.ready ? "defense" : "warn"}
+                tone={status.data?.ready ? "defense" : "muted"}
                 hint="financial twin world"
               />
               <Stat

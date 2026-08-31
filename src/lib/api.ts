@@ -1,13 +1,13 @@
 /**
- * PROMETHEUS backend contract (kartik branch).
+ * PROMETHEUS backend contract.
  * Every shape here is transcribed from the verified endpoint contract.
  * Base URL and timeouts are centralized in ./api-config and routed via ./api-client.
  */
 
-import { API_BASE, TIMEOUTS } from "./api-config";
+import { API_BASE, TIMEOUTS, TIMEOUT } from "./api-config";
 import { ApiError, apiFetch, apiHealthz, get, post } from "./api-client";
 
-export { API_BASE, TIMEOUTS, ApiError, apiFetch, apiHealthz, get, post };
+export { API_BASE, TIMEOUTS, TIMEOUT, ApiError, apiFetch, apiHealthz, get, post };
 
 /* ---------- shared ---------- */
 
@@ -149,11 +149,11 @@ export interface Trajectory {
 }
 
 export const apiGraph = (params: {
-  filter?: "overview" | "fraud" | "trajectory" | "ego" | "all";
-  trajectory_id?: string;
-  node_id?: string;
-  max_nodes?: number;
-  max_edges?: number;
+  filter?: "overview" | "fraud" | "trajectory" | "ego" | "all" | undefined;
+  trajectory_id?: string | undefined;
+  node_id?: string | undefined;
+  max_nodes?: number | undefined;
+  max_edges?: number | undefined;
 }) => {
   const q = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => v !== undefined && v !== "" && q.set(k, String(v)));

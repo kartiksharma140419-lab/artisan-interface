@@ -59,7 +59,9 @@ export function Stat({
   const toneClass =
     tone === "attack"
       ? "text-attack font-bold"
-      : tone === "defense"
+      : tone === "warn"
+        ? "text-warn font-bold"
+        : tone === "defense"
         ? "text-defense font-bold"
         : tone === "warn"
           ? "text-warn font-bold"

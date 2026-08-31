@@ -1,24 +1,37 @@
-import { API_BASE, TIMEOUTS } from "./api-config";
+import { API_BASE, TIMEOUTS, TIMEOUT } from "./api-config";
 
 export class ApiError extends Error {
   status: number;
   detail?: unknown;
   isColdStart: boolean;
+  coldStart: boolean;
 
-  constructor(message: string, status = 0, options?: { detail?: unknown; isColdStart?: boolean }) {
+  constructor(message: string, status = 0, options?: { detail?: unknown; isColdStart?: boolean } | boolean) {
     super(message);
     this.name = "ApiError";
     this.status = status;
-    this.detail = options?.detail;
-    this.isColdStart = Boolean(
-      options?.isColdStart || status === 502 || status === 503 || status === 504 || status === 0,
-    );
+    if (typeof options === "boolean") {
+      this.isColdStart = options;
+      this.coldStart = options;
+    } else {
+      this.detail = options?.detail;
+      const cold = Boolean(
+        options?.isColdStart || status === 502 || status === 503 || status === 504 || status === 0,
+      );
+      this.isColdStart = cold;
+      this.coldStart = cold;
+    }
   }
 }
 
 export interface ApiFetchOptions extends RequestInit {
   timeout?: number;
+  timeoutMs?: number;
+  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+  body?: BodyInit | null;
 }
+
+export type FetchOpts = ApiFetchOptions;
 
 /**
  * Unified fetch wrapper with:
@@ -28,7 +41,8 @@ export interface ApiFetchOptions extends RequestInit {
  * 4. Cold-start error tagging
  */
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
-  const { timeout = TIMEOUTS.reads, headers, ...restInit } = options;
+  const timeout = options.timeout ?? options.timeoutMs ?? TIMEOUTS.reads;
+  const { headers, ...restInit } = options;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
@@ -42,7 +56,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
       signal: controller.signal,
       headers: {
         Accept: "application/json",
-        ...(restInit.body ? { "Content-Type": "application/json" } : {}),
+        ...(restInit.body && typeof restInit.body === "string" ? { "Content-Type": "application/json" } : {}),
         ...headers,
       },
     });
@@ -50,7 +64,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     clearTimeout(timer);
     if (err instanceof DOMException && err.name === "AbortError") {
       throw new ApiError(
-        `Request to ${path} timed out after ${timeout / 1000}s (Render may be waking up)`,
+        `Request to ${path} timed out after ${Math.round(timeout / 1000)}s (Render may be waking up)`,
         408,
         { isColdStart: true },
       );
@@ -125,25 +139,32 @@ export const post = <T>(path: string, body?: unknown, timeout: number = TIMEOUTS
     timeout,
   });
 
+export interface HealthResult {
+  ok: boolean;
+  ready: boolean;
+  retried: boolean;
+  coldStartWoken?: boolean;
+}
+
 /**
  * Pre-warm and health probe.
  * Probes GET /api/status. If it fails on a cold start, retries once with a 60s timeout window.
  */
-export async function apiHealthz(): Promise<{ ready: boolean; coldStartWoken?: boolean }> {
+export async function apiHealthz(onWaking?: () => void): Promise<HealthResult> {
   try {
-    const res = await apiFetch<{ ready: boolean }>("/api/status", {
+    const res = await apiFetch<{ ready?: boolean }>("/api/status", {
       method: "GET",
-      timeout: TIMEOUTS.health,
+      timeout: TIMEOUT.health,
     });
-    return { ready: Boolean(res.ready) };
+    return { ok: true, ready: Boolean(res.ready), retried: false };
   } catch (err) {
-    if (err instanceof ApiError && err.isColdStart) {
-      // Retry once with longer 60s timeout for cold start spin-up
-      const retryRes = await apiFetch<{ ready: boolean }>("/api/status", {
+    if (err instanceof ApiError && (err.isColdStart || err.coldStart)) {
+      onWaking?.();
+      const retryRes = await apiFetch<{ ready?: boolean }>("/api/status", {
         method: "GET",
-        timeout: TIMEOUTS.init,
+        timeout: TIMEOUT.init,
       });
-      return { ready: Boolean(retryRes.ready), coldStartWoken: true };
+      return { ok: true, ready: Boolean(retryRes.ready), retried: true, coldStartWoken: true };
     }
     throw err;
   }
