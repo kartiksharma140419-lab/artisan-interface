@@ -42,8 +42,8 @@ export interface StatusResponse {
 }
 
 export const apiInit = (body?: { seed?: number; num_accounts?: number; num_steps?: number }) =>
-  post<InitResponse>("/api/init", body ?? {});
-export const apiStatus = () => get<StatusResponse>("/api/status");
+  post<InitResponse>("/api/init", body ?? {}, TIMEOUT.init);
+export const apiStatus = () => get<StatusResponse>("/api/status", TIMEOUT.health);
 
 /* ---------- ambient stream ---------- */
 
@@ -97,7 +97,7 @@ export interface DemoRunResponse {
   };
 }
 
-export const apiDemoRun = () => post<DemoRunResponse>("/api/demo/run");
+export const apiDemoRun = () => post<DemoRunResponse>("/api/demo/run", {}, TIMEOUT.demoRun);
 
 /* ---------- knowledge graph ---------- */
 
