@@ -2,7 +2,9 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { API_BASE, apiInit, apiStatus } from "@/lib/api";
 import { useApi } from "@/lib/use-api";
+import { useBackendHealth } from "@/lib/use-backend-health";
 import { Button, Mono, Tag } from "./Panel";
+
 
 const NAV = [
   { to: "/", label: "Overview" },
