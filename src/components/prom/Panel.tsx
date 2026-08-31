@@ -62,9 +62,7 @@ export function Stat({
       : tone === "warn"
         ? "text-warn font-bold"
         : tone === "defense"
-        ? "text-defense font-bold"
-        : tone === "warn"
-          ? "text-warn font-bold"
+          ? "text-defense font-bold"
           : tone === "muted"
             ? "text-muted-foreground"
             : "text-white font-bold";
