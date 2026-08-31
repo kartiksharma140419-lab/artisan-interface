@@ -79,8 +79,14 @@ export function AmbientStrip() {
             }}
           />
           <Mono className="text-white/80 font-medium text-[11px] sm:text-xs">
-            stream · {state === "error" ? "offline" : state}
+            stream ·{" "}
+            {state === "error"
+              ? "offline"
+              : state === "waking"
+                ? "waking engine…"
+                : state}
           </Mono>
+
         </div>
 
         <svg width="200" height="24" className="shrink-0 hidden md:block" aria-hidden>
