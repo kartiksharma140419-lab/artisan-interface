@@ -1,41 +1,13 @@
 /**
  * PROMETHEUS backend contract (kartik branch).
- * Every shape here was transcribed from the verified endpoint contract.
- * Base URL is configurable: set VITE_API_BASE_URL to point at a deployed backend.
+ * Every shape here is transcribed from the verified endpoint contract.
+ * Base URL and timeouts are centralized in ./api-config and routed via ./api-client.
  */
 
-export const API_BASE =
-  (import.meta.env["VITE_API_BASE_URL"] as string | undefined)?.replace(/\/$/, "") ||
-  "http://localhost:8000";
+import { API_BASE, TIMEOUTS } from "./api-config";
+import { ApiError, apiFetch, apiHealthz, get, post } from "./api-client";
 
-export class ApiError extends Error {
-  status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-  }
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    });
-  } catch {
-    throw new ApiError(`Backend unreachable at ${API_BASE}`, 0);
-  }
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new ApiError(`${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 240)}` : ""}`, res.status);
-  }
-  return (await res.json()) as T;
-}
-
-export const get = <T,>(path: string) => request<T>(path);
-export const post = <T,>(path: string, body?: unknown) =>
-  request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) });
+export { API_BASE, TIMEOUTS, ApiError, apiFetch, apiHealthz, get, post };
 
 /* ---------- shared ---------- */
 
@@ -63,8 +35,9 @@ export interface StatusResponse {
 }
 
 export const apiInit = (body?: { seed?: number; num_accounts?: number; num_steps?: number }) =>
-  post<InitResponse>("/api/init", body ?? {});
-export const apiStatus = () => get<StatusResponse>("/api/status");
+  post<InitResponse>("/api/init", body ?? {}, TIMEOUTS.init);
+
+export const apiStatus = () => get<StatusResponse>("/api/status", TIMEOUTS.health);
 
 /* ---------- ambient stream ---------- */
 
@@ -82,7 +55,7 @@ export interface StepEvent {
 }
 
 export const apiInject = (attack_type: string) =>
-  post<unknown>("/api/stream/inject", { attack_type });
+  post<unknown>("/api/stream/inject", { attack_type }, TIMEOUTS.reads);
 
 /* ---------- demo run ---------- */
 
@@ -118,7 +91,7 @@ export interface DemoRunResponse {
   };
 }
 
-export const apiDemoRun = () => post<DemoRunResponse>("/api/demo/run");
+export const apiDemoRun = () => post<DemoRunResponse>("/api/demo/run", {}, TIMEOUTS.demo_run);
 
 /* ---------- knowledge graph ---------- */
 
@@ -184,11 +157,11 @@ export const apiGraph = (params: {
 }) => {
   const q = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => v !== undefined && v !== "" && q.set(k, String(v)));
-  return get<GraphResponse>(`/api/graph?${q.toString()}`);
+  return get<GraphResponse>(`/api/graph?${q.toString()}`, TIMEOUTS.reads);
 };
 
 export const apiTrajectories = () =>
-  get<{ trajectories: Trajectory[] } | Trajectory[]>("/api/graph/trajectories");
+  get<{ trajectories: Trajectory[] } | Trajectory[]>("/api/graph/trajectories", TIMEOUTS.reads);
 
 export interface NodeDetail {
   id?: string;
@@ -198,7 +171,8 @@ export interface NodeDetail {
   risk_signals?: { recent_peak_score?: number };
 }
 
-export const apiNode = (id: string) => get<NodeDetail>(`/api/graph/node/${encodeURIComponent(id)}`);
+export const apiNode = (id: string) =>
+  get<NodeDetail>(`/api/graph/node/${encodeURIComponent(id)}`, TIMEOUTS.reads);
 
 /* ---------- investigator ---------- */
 
@@ -228,7 +202,7 @@ export interface CaseFile {
 }
 
 export const apiInvestigate = (case_id: string, tx_ids: string[]) =>
-  post<CaseFile>("/api/investigate", { case_id, tx_ids });
+  post<CaseFile>("/api/investigate", { case_id, tx_ids }, TIMEOUTS.compute);
 
 /* ---------- T9 / PCAT ---------- */
 
@@ -260,7 +234,7 @@ export interface CheckoutResponse {
 }
 
 export const apiCheckout = (body: CheckoutRequest) =>
-  post<CheckoutResponse>("/api/agentic/checkout", body);
+  post<CheckoutResponse>("/api/agentic/checkout", body, TIMEOUTS.compute);
 
 export interface AgenticStatus {
   agents?: unknown;
@@ -273,7 +247,7 @@ export interface AgenticStatus {
   events?: Array<Record<string, unknown>>;
 }
 
-export const apiAgenticStatus = () => get<AgenticStatus>("/api/agentic/status");
+export const apiAgenticStatus = () => get<AgenticStatus>("/api/agentic/status", TIMEOUTS.reads);
 
 export interface ProtocolArtifact {
   per_rc?: Record<string, Record<string, unknown>>;
@@ -283,17 +257,17 @@ export interface ProtocolArtifact {
   note?: string;
 }
 
-export const apiProtocol = () => get<Artifact<ProtocolArtifact>>("/api/protocol");
+export const apiProtocol = () => get<Artifact<ProtocolArtifact>>("/api/protocol", TIMEOUTS.reads);
 
 /* ---------- proof layer ---------- */
 
 export interface OodArtifact {
-  rates: number[][];
+  rates: Record<string, Record<string, number>> | number[][];
   types: string[];
   mechanisms: string[];
   note?: string;
 }
-export const apiOod = () => get<Artifact<OodArtifact>>("/api/ood");
+export const apiOod = () => get<Artifact<OodArtifact>>("/api/ood", TIMEOUTS.reads);
 
 export interface RlStretch {
   episodes_run: number;
@@ -301,20 +275,30 @@ export interface RlStretch {
   heuristic_baseline: number;
   shipped: boolean;
   honest_negative: boolean;
-  pre_registered_criterion: string;
+  pre_registered_criterion: string | Record<string, unknown>;
   note?: string;
 }
-export const apiRlStretch = () => get<Artifact<RlStretch>>("/api/rl-stretch");
+export const apiRlStretch = () => get<Artifact<RlStretch>>("/api/rl-stretch", TIMEOUTS.reads);
 
 export interface Attribution {
-  exhibit?: { matrix?: number[][]; mechanisms?: string[]; sources?: string[] };
-  live?: { matrix?: number[][]; mechanisms?: string[]; sources?: string[] };
+  exhibit?: {
+    matrix?: Record<string, Record<string, number>> | number[][];
+    mechanisms?: string[];
+    sources?: string[];
+    rates?: Record<string, Record<string, number>>;
+  };
+  live?: {
+    matrix?: Record<string, Record<string, number>> | number[][];
+    mechanisms?: string[];
+    sources?: string[];
+    rates?: Record<string, Record<string, number>>;
+  };
   sources?: string[];
   mechanisms?: string[];
-  matrix?: number[][];
+  matrix?: Record<string, Record<string, number>> | number[][];
   note?: string;
 }
-export const apiAttribution = () => get<Artifact<Attribution>>("/api/attribution");
+export const apiAttribution = () => get<Artifact<Attribution>>("/api/attribution", TIMEOUTS.reads);
 
 export interface StructuredWeights {
   fitted?: Record<string, number>;
@@ -324,7 +308,8 @@ export interface StructuredWeights {
   note?: string;
   [k: string]: unknown;
 }
-export const apiStructuredWeights = () => get<Artifact<StructuredWeights>>("/api/structured-weights");
+export const apiStructuredWeights = () =>
+  get<Artifact<StructuredWeights>>("/api/structured-weights", TIMEOUTS.reads);
 
 export interface TimelineEntry {
   [k: string]: unknown;
@@ -335,7 +320,7 @@ export interface TimelineArtifact {
   timeline?: TimelineEntry[];
   note?: string;
 }
-export const apiTimeline = () => get<Artifact<TimelineArtifact>>("/api/timeline");
+export const apiTimeline = () => get<Artifact<TimelineArtifact>>("/api/timeline", TIMEOUTS.reads);
 
 /* ---------- combo ---------- */
 
@@ -356,7 +341,7 @@ export interface ComboResponse {
   stage_names: string[];
 }
 
-export const apiCombo = () => post<ComboResponse>("/api/combo");
+export const apiCombo = () => post<ComboResponse>("/api/combo", {}, TIMEOUTS.compute);
 
 /* ---------- scoring ---------- */
 
@@ -366,7 +351,7 @@ export interface SampleTxs {
   samples?: Array<Record<string, unknown>>;
   [k: string]: unknown;
 }
-export const apiSampleTxs = () => get<SampleTxs>("/api/sample-txs");
+export const apiSampleTxs = () => get<SampleTxs>("/api/sample-txs", TIMEOUTS.reads);
 
 export interface ScoreResponse {
   tx_id: string;
@@ -382,7 +367,7 @@ export interface ScoreResponse {
   [k: string]: unknown;
 }
 export const apiScore = (tx_id: string) =>
-  get<ScoreResponse>(`/api/score?tx_id=${encodeURIComponent(tx_id)}`);
+  get<ScoreResponse>(`/api/score?tx_id=${encodeURIComponent(tx_id)}`, TIMEOUTS.reads);
 
 export const SIGNAL_KEYS = [
   "xgb",

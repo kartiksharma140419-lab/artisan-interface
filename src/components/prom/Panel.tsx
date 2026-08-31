@@ -53,17 +53,19 @@ export function Stat({
 }: {
   label: string;
   value: ReactNode;
-  hint?: string;
-  tone?: "ink" | "attack" | "defense" | "muted";
+  hint?: string | undefined;
+  tone?: "ink" | "attack" | "defense" | "muted" | "warn" | undefined;
 }) {
   const toneClass =
     tone === "attack"
       ? "text-attack font-bold"
       : tone === "defense"
         ? "text-defense font-bold"
-        : tone === "muted"
-          ? "text-muted-foreground"
-          : "text-white font-bold";
+        : tone === "warn"
+          ? "text-warn font-bold"
+          : tone === "muted"
+            ? "text-muted-foreground"
+            : "text-white font-bold";
   return (
     <div className="border-l border-rule pl-3 py-0.5">
       <p className="label text-white/80">{label}</p>
@@ -82,7 +84,7 @@ export function Button({
   type = "button",
 }: {
   children: ReactNode;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   disabled?: boolean;
   tone?: "ink" | "attack" | "defense";
   className?: string;

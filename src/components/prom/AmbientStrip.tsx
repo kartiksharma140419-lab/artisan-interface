@@ -10,16 +10,22 @@ import { Button, Mono, Tag } from "./Panel";
  */
 export function AmbientStrip() {
   const [events, setEvents] = useState<StepEvent[]>([]);
-  const [state, setState] = useState<"connecting" | "live" | "done" | "error">("connecting");
+  const [state, setState] = useState<"connecting" | "waking" | "live" | "done" | "error">("connecting");
   const [attack, setAttack] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
+    // 4s silence detection: if stream doesn't emit within 4s, engine is likely waking up
+    const silenceTimer = setTimeout(() => {
+      setState((prev) => (prev === "connecting" ? "waking" : prev));
+    }, 4000);
+
     const es = new EventSource(`${API_BASE}/api/stream`);
     esRef.current = es;
 
     const onStep = (e: MessageEvent) => {
       try {
+        clearTimeout(silenceTimer);
         const d = JSON.parse(e.data) as StepEvent;
         // heartbeat comments never reach here; still guard on type
         if (d.type && d.type !== "step") return;
@@ -32,12 +38,25 @@ export function AmbientStrip() {
     };
 
     es.addEventListener("step", onStep as EventListener);
-    es.addEventListener("init", () => setState("live"));
-    es.addEventListener("done", () => setState("done"));
+    es.addEventListener("init", () => {
+      clearTimeout(silenceTimer);
+      setState("live");
+    });
+    es.addEventListener("done", () => {
+      clearTimeout(silenceTimer);
+      setState("done");
+      es.close(); // clean close on completion: avoid silent auto-reconnect
+    });
     es.addEventListener("message", onStep as EventListener);
-    es.onerror = () => setState((s) => (s === "done" ? s : "error"));
+    es.onerror = () => {
+      clearTimeout(silenceTimer);
+      setState((s) => (s === "done" ? s : "error"));
+    };
 
-    return () => es.close();
+    return () => {
+      clearTimeout(silenceTimer);
+      es.close();
+    };
   }, []);
 
   const last = events[events.length - 1];
@@ -56,11 +75,13 @@ export function AmbientStrip() {
                   ? "var(--color-defense)"
                   : state === "error"
                     ? "var(--color-attack)"
-                    : "rgba(255, 255, 255, 0.4)",
+                    : state === "waking"
+                      ? "var(--color-warn)"
+                      : "rgba(255, 255, 255, 0.4)",
             }}
           />
           <Mono className="text-white/80 font-medium text-[11px] sm:text-xs">
-            stream · {state === "error" ? "offline" : state}
+            stream · {state === "error" ? "offline" : state === "waking" ? "waking engine…" : state}
           </Mono>
         </div>
 

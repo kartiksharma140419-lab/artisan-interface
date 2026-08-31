@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Eyebrow, Mono, Tag } from "@/components/prom/Panel";
 import { Pcat } from "@/components/prom/Pcat";
 import { AttributionPanel, StructuredWeightsPanel } from "@/components/prom/ProofPanels";
+import { SixArcWard } from "@/components/prom/SixArcWard";
 import { TxInspector } from "@/components/prom/TxInspector";
 
 export const Route = createFileRoute("/defense")({
@@ -45,6 +46,15 @@ function DefensePage() {
 
       {/* Main Defense Workspace */}
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 space-y-8 sm:space-y-10">
+        {/* Six-Arc Ward Multi-Detector Visualization */}
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <Eyebrow>Ensemble Architecture</Eyebrow>
+            <Mono className="text-muted-foreground">orthogonal detection manifolds</Mono>
+          </div>
+          <SixArcWard />
+        </section>
+
         {/* PCAT vs Naive Rails Arena */}
         <section>
           <div className="mb-3 flex items-baseline justify-between">

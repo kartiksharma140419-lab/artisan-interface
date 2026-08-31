@@ -175,7 +175,7 @@ function BeatRow({
   visible: boolean;
   title: string;
   recall: number;
-  results?: Record<string, AttackResult>;
+  results?: Record<string, AttackResult> | undefined;
   tone: "attack" | "defense";
 }) {
   return (

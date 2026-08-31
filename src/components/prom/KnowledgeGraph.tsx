@@ -91,7 +91,7 @@ export function KnowledgeGraph({
     () =>
       apiGraph({
         filter: effFilter,
-        trajectory_id: trajId ?? undefined,
+        ...(trajId ? { trajectory_id: trajId } : {}),
         max_nodes: 150,
         max_edges: 250,
       }),

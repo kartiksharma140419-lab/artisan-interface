@@ -32,7 +32,7 @@ function parseColor(input: string): [number, number, number, number] {
         return [(num >> 16) & 255, (num >> 8) & 255, num & 255, 1]
     }
     const m = s.match(/rgba?\(([^)]+)\)/i)
-    if (m) {
+    if (m && m[1]) {
         const parts = m[1].split(",").map((p) => parseFloat(p.trim()))
         return [
             parts[0] || 0,
@@ -282,130 +282,108 @@ export default function GlitterWrap(props: Props) {
             // the hot loop allocates zero strings — the previous rgba()-per-star
             // approach churned ~120k short-lived strings/sec at 700 particles,
             // whose GC pauses were the main cause of the stutter.
+            const p0 = palette[0] ?? [255, 255, 255];
+            const p1 = palette[1] ?? [216, 225, 255];
+            const p2 = palette[2] ?? [232, 213, 255];
             const rgbStrs = [
-                `rgb(${palette[0][0]}, ${palette[0][1]}, ${palette[0][2]})`,
-                `rgb(${palette[1][0]}, ${palette[1][1]}, ${palette[1][2]})`,
-                `rgb(${palette[2][0]}, ${palette[2][1]}, ${palette[2][2]})`,
-            ]
+                `rgb(${p0[0]}, ${p0[1]}, ${p0[2]})`,
+                `rgb(${p1[0]}, ${p1[1]}, ${p1[2]})`,
+                `rgb(${p2[0]}, ${p2[1]}, ${p2[2]})`,
+            ];
 
-            const { w, h } = sizeRef.current
-            const cx = w / 2
-            const cy = h / 2
+            const { w, h } = sizeRef.current;
+            const cx = w / 2;
+            const cy = h / 2;
             // Scale used for projection; tied to smaller dimension so it adapts
-            const projScale = Math.min(w, h) * 0.9
+            const projScale = Math.min(w, h) * 0.9;
 
             // Cap deltaSec to avoid large jumps when the tab was backgrounded
-            const dt = Math.max(0.001, Math.min(0.1, deltaSec)) * 60 // normalize to "frames at 60fps"
+            const dt = Math.max(0.001, Math.min(0.1, deltaSec)) * 60; // normalize to "frames at 60fps"
 
             // Soft "trails" — fade prior pixels toward transparent so the
             // user's frame fill shows through (the canvas itself has no bg).
-            // Uses destination-out: filling with alpha=trailAlpha subtracts that
-            // much from existing pixel alpha each frame, erasing old streaks.
-            // Decay is framerate-independent: `trail` is the fraction of the
-            // previous frame kept per 1/60s, raised to dt so trail length stays
-            // constant whether the display runs 60Hz, 120Hz, or a stuttering
-            // variable rate. A fixed per-frame alpha (the old approach) makes the
-            // glow visibly breathe as fps fluctuates. Floor keeps a little erase
-            // even at trail=100 so the canvas never smears into a solid field.
-            const keep = Math.pow(Math.min(0.98, Math.max(0, trail)), dt)
-            const trailAlpha = Math.max(0.02, 1 - keep)
-            ctx.globalAlpha = 1
-            ctx.globalCompositeOperation = "destination-out"
-            ctx.fillStyle = `rgba(0, 0, 0, ${trailAlpha})`
-            ctx.fillRect(0, 0, w, h)
+            const keep = Math.pow(Math.min(0.98, Math.max(0, trail)), dt);
+            const trailAlpha = Math.max(0.02, 1 - keep);
+            ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = "destination-out";
+            ctx.fillStyle = `rgba(0, 0, 0, ${trailAlpha})`;
+            ctx.fillRect(0, 0, w, h);
 
             // Switch to additive for the stars
-            ctx.globalCompositeOperation = "lighter"
+            ctx.globalCompositeOperation = "lighter";
 
             for (let i = 0; i < stars.length; i++) {
-                const s = stars[i]
+                const s = stars[i];
+                if (!s) continue;
 
                 // Forward: z decreases toward focalDepth (stars fly outward).
                 // Reverse: z increases toward 1 (stars recede into the centre).
-                const vz = stepZ * s.vmul * dt
+                const vz = stepZ * s.vmul * dt;
                 if (reverse) {
-                    s.z += vz
+                    s.z += vz;
                     if (s.z >= 1.0) {
-                        resetStar(s)
-                        continue
+                        resetStar(s);
+                        continue;
                     }
                 } else {
-                    s.z -= vz
+                    s.z -= vz;
                     if (s.z <= focalDepth) {
-                        resetStar(s)
-                        continue
+                        resetStar(s);
+                        continue;
                     }
                 }
 
                 // Turbulence: gentle sinusoidal wobble that grows as star approaches
-                let tx = s.x
-                let ty = s.y
+                let tx = s.x;
+                let ty = s.y;
                 if (turbulence > 0) {
-                    const t = elapsed * 1.2 + s.seed
-                    const amp = turbulence * (1 - s.z) * 0.25
-                    tx += Math.sin(t + s.seed) * amp
-                    ty += Math.cos(t * 1.13 + s.seed * 0.7) * amp
+                    const t = elapsed * 1.2 + s.seed;
+                    const amp = turbulence * (1 - s.z) * 0.25;
+                    tx += Math.sin(t + s.seed) * amp;
+                    ty += Math.cos(t * 1.13 + s.seed * 0.7) * amp;
                 }
 
                 // Project: as z -> 0, the star expands outward from centre
-                const persp = focalDepth / Math.max(s.z, 0.0001)
-                const sx = cx + tx * persp * projScale
-                const sy = cy + ty * persp * projScale
+                const persp = focalDepth / Math.max(s.z, 0.0001);
+                const sx = cx + tx * persp * projScale;
+                const sy = cy + ty * persp * projScale;
 
-                // Off-screen? respawn — forward only. A reverse star is born at
-                // z=focalDepth where persp=1, which can place it past the edge;
-                // it then travels inward ONTO the screen. Culling on sight would
-                // kill it before it appears, so reverse stars are retired only by
-                // the z >= 1 reset (mirror of forward's z <= focalDepth reset).
                 if (
                     !reverse &&
                     (sx < -20 || sx > w + 20 || sy < -20 || sy > h + 20)
                 ) {
-                    resetStar(s)
-                    continue
+                    resetStar(s);
+                    continue;
                 }
 
                 // Glitter flash logic.
-                let flashMult = 1
+                let flashMult = 1;
                 if (glitter > 0) {
                     if (elapsed >= s.nextFlash && s.flashUntil < elapsed) {
                         // Flash for ~40–110ms, then schedule the next one.
-                        s.flashUntil = elapsed + 0.04 + Math.random() * 0.07
+                        s.flashUntil = elapsed + 0.04 + Math.random() * 0.07;
                         s.nextFlash =
                             elapsed +
                             1 +
-                            Math.random() * 4 * (1 / Math.max(0.0001, glitter))
+                            Math.random() * 4 * (1 / Math.max(0.0001, glitter));
                     }
                     if (elapsed <= s.flashUntil) {
-                        flashMult = 1 + 2.5 * glitter
+                        flashMult = 1 + 2.5 * glitter;
                     }
                 }
 
-                // Size grows as z -> 0. The cap scales with starScale so the
-                // "Star Size" control stays visibly distinct across its whole
-                // range — the old flat 1.8px cap clamped every size above ~3
-                // to the same dot, making the control do nothing past that.
                 const sizePersp = Math.min(
                     2.5,
                     (focalDepth / Math.max(s.z, 0.0001)) * 0.6
-                )
-                const baseR = Math.max(0.25, starScale * (0.4 + sizePersp))
-                const maxR = 1 + starScale * 2.5
-                const r = Math.min(baseR * flashMult, maxR)
+                );
+                const baseR = Math.max(0.25, starScale * (0.4 + sizePersp));
+                const maxR = 1 + starScale * 2.5;
+                const r = Math.min(baseR * flashMult, maxR);
 
-                // Alpha — brighter as nearer, modulated by brightness.
-                // In reverse, stars travel from edge inward. They'd fade out
-                // too early using the same curve as forward, so keep them
-                // bright for most of the journey and only fade at the very
-                // last stretch.
-                const lifeT = reverse ? s.z : 1 - s.z // 0=spawn, 1=despawn
-                // Reverse spawns at the screen edge already bright (0.85 curve),
-                // so each respawn pops. Ramp alpha up over the first ~12% of the
-                // journey so stars fade in instead. Forward already spawns near
-                // zero alpha, so it needs no ramp.
+                const lifeT = reverse ? s.z : 1 - s.z;
                 const fadeIn = reverse
                     ? Math.min(1, (s.z - focalDepth) / (1 - focalDepth) / 0.12)
-                    : 1
+                    : 1;
                 const a =
                     Math.min(
                         1,
@@ -413,40 +391,32 @@ export default function GlitterWrap(props: Props) {
                     ) *
                     fadeIn *
                     brightness *
-                    (flashMult > 1 ? 1 : 0.85)
+                    (flashMult > 1 ? 1 : 0.85);
 
-                // Solid colour string (1 of 3, cached); per-star opacity rides
-                // on globalAlpha so nothing is allocated in this hot loop.
-                const colStr = rgbStrs[s.colorIdx]
+                const colStr = rgbStrs[s.colorIdx] ?? rgbStrs[0] ?? "rgb(255,255,255)";
 
-                // Streak from previous projected position to current. Kept
-                // thin so trails read as fine lines, not painted strokes.
                 if (!Number.isNaN(s.px) && !Number.isNaN(s.py)) {
-                    ctx.globalAlpha = a * 0.5
-                    ctx.strokeStyle = colStr
-                    ctx.lineWidth = Math.max(0.4, r * 0.4)
-                    ctx.beginPath()
-                    ctx.moveTo(s.px, s.py)
-                    ctx.lineTo(sx, sy)
-                    ctx.stroke()
+                    ctx.globalAlpha = a * 0.5;
+                    ctx.strokeStyle = colStr;
+                    ctx.lineWidth = Math.max(0.4, r * 0.4);
+                    ctx.beginPath();
+                    ctx.moveTo(s.px, s.py);
+                    ctx.lineTo(sx, sy);
+                    ctx.stroke();
                 }
 
-                // Tiny dot head — fillRect instead of arc(): at sub-pixel radii
-                // a square reads identically but skips per-star path tessellation.
-                ctx.globalAlpha = a
-                ctx.fillStyle = colStr
-                ctx.fillRect(sx - r, sy - r, r * 2, r * 2)
+                ctx.globalAlpha = a;
+                ctx.fillStyle = colStr;
+                ctx.fillRect(sx - r, sy - r, r * 2, r * 2);
 
-                // Glitter flash adds a subtle extra square at slightly larger
-                // radius so it reads as a sparkle, not a halo.
                 if (flashMult > 1) {
-                    const rf = Math.min(r * 1.4, maxR * 1.4)
-                    ctx.globalAlpha = a * 0.5
-                    ctx.fillRect(sx - rf, sy - rf, rf * 2, rf * 2)
+                    const rf = Math.min(r * 1.4, maxR * 1.4);
+                    ctx.globalAlpha = a * 0.5;
+                    ctx.fillRect(sx - rf, sy - rf, rf * 2, rf * 2);
                 }
 
-                s.px = sx
-                s.py = sy
+                s.px = sx;
+                s.py = sy;
             }
 
             ctx.globalAlpha = 1

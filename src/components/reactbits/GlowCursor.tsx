@@ -260,7 +260,9 @@ export const GlowCursor = ({
       width = window.innerWidth;
       height = window.innerHeight;
       renderer.setSize(width, height);
-      program.uniforms.uResolution.value = [width, height];
+      if (program.uniforms["uResolution"]) {
+        program.uniforms["uResolution"].value = [width, height];
+      }
     };
 
     const initializeTrail = (x: number, y: number) => {
@@ -289,6 +291,7 @@ export const GlowCursor = ({
     const updateTouch = (event: TouchEvent) => {
       if (!event.touches || event.touches.length === 0) return;
       const touch = event.touches[0];
+      if (!touch) return;
       const x = clamp(touch.clientX, 0, width);
       const y = clamp(height - touch.clientY, 0, height);
       if (!initialized) initializeTrail(x, y);
@@ -322,17 +325,27 @@ export const GlowCursor = ({
         const chainEase = 1 - Math.pow(1 - chainBase, delta);
         head.x += (target.x - head.x) * headEase;
         head.y += (target.y - head.y) * headEase;
-        points[0].x = head.x;
-        points[0].y = head.y;
+        const p0 = points[0];
+        if (p0) {
+          p0.x = head.x;
+          p0.y = head.y;
+        }
 
         for (let i = 1; i < MAX_POINTS; i++) {
-          points[i].x += (points[i - 1].x - points[i].x) * chainEase;
-          points[i].y += (points[i - 1].y - points[i].y) * chainEase;
+          const prev = points[i - 1];
+          const curr = points[i];
+          if (prev && curr) {
+            curr.x += (prev.x - curr.x) * chainEase;
+            curr.y += (prev.y - curr.y) * chainEase;
+          }
         }
 
         for (let i = 0; i < MAX_POINTS; i++) {
-          pointData[i * 2] = points[i].x;
-          pointData[i * 2 + 1] = points[i].y;
+          const pt = points[i];
+          if (pt) {
+            pointData[i * 2] = pt.x;
+            pointData[i * 2 + 1] = pt.y;
+          }
         }
       }
 
@@ -353,21 +366,22 @@ export const GlowCursor = ({
 
       wasIdle = false;
 
-      program.uniforms.uPointCount.value = clamp(Math.round(config.trailLength || 40), 2, MAX_POINTS);
-      program.uniforms.uColor.value = hexToRgb(config.color || '#67E8F9');
-      program.uniforms.uSecondaryColor.value = hexToRgb(config.secondaryColor || '#A78BFA');
-      program.uniforms.uTrailWidth.value = Math.max(config.trailWidth || 8, 0.1);
-      program.uniforms.uTaper.value = clamp(config.trailTaper || 0.8, 0, 1);
-      program.uniforms.uGlowIntensity.value = Math.max(config.glowIntensity || 1.9, 0);
-      program.uniforms.uGlowSpread.value = Math.max(config.glowSpread || 1.2, 0);
-      program.uniforms.uHotspot.value = clamp(config.hotspot || 0.65, 0, 1);
-      program.uniforms.uBrightness.value = Math.max(config.brightness || 1.25, 0);
-      program.uniforms.uOpacity.value = clamp(config.opacity || 1, 0, 1);
-      program.uniforms.uPulseSpeed.value = config.pulseSpeed ?? 1.1;
-      program.uniforms.uNoiseStrength.value = clamp(config.noiseStrength || 0.035, 0, 1);
-      program.uniforms.uNormalBlend.value = config.blendMode === 'normal' ? 1 : 0;
-      program.uniforms.uTime.value = now * 0.001;
-      program.uniforms.uFade.value = fade;
+      const u = program.uniforms;
+      if (u["uPointCount"]) u["uPointCount"].value = clamp(Math.round(config.trailLength || 40), 2, MAX_POINTS);
+      if (u["uColor"]) u["uColor"].value = hexToRgb(config.color || '#67E8F9');
+      if (u["uSecondaryColor"]) u["uSecondaryColor"].value = hexToRgb(config.secondaryColor || '#A78BFA');
+      if (u["uTrailWidth"]) u["uTrailWidth"].value = Math.max(config.trailWidth || 8, 0.1);
+      if (u["uTaper"]) u["uTaper"].value = clamp(config.trailTaper || 0.8, 0, 1);
+      if (u["uGlowIntensity"]) u["uGlowIntensity"].value = Math.max(config.glowIntensity || 1.9, 0);
+      if (u["uGlowSpread"]) u["uGlowSpread"].value = Math.max(config.glowSpread || 1.2, 0);
+      if (u["uHotspot"]) u["uHotspot"].value = clamp(config.hotspot || 0.65, 0, 1);
+      if (u["uBrightness"]) u["uBrightness"].value = Math.max(config.brightness || 1.25, 0);
+      if (u["uOpacity"]) u["uOpacity"].value = clamp(config.opacity || 1, 0, 1);
+      if (u["uPulseSpeed"]) u["uPulseSpeed"].value = config.pulseSpeed ?? 1.1;
+      if (u["uNoiseStrength"]) u["uNoiseStrength"].value = clamp(config.noiseStrength || 0.035, 0, 1);
+      if (u["uNormalBlend"]) u["uNormalBlend"].value = config.blendMode === 'normal' ? 1 : 0;
+      if (u["uTime"]) u["uTime"].value = now * 0.001;
+      if (u["uFade"]) u["uFade"].value = fade;
 
       renderer.render({ scene: mesh });
       if (!destroyed) raf = requestAnimationFrame(render);

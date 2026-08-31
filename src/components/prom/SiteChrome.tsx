@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { API_BASE, apiInit, apiStatus } from "@/lib/api";
-import { useApi } from "@/lib/use-api";
+import { apiInit } from "@/lib/api";
+import { useBackendHealth } from "@/lib/use-backend-health";
 import { Button, Mono, Tag } from "./Panel";
 
 const NAV = [
@@ -13,7 +13,7 @@ const NAV = [
 ] as const;
 
 export function SiteHeader() {
-  const status = useApi(["status"], apiStatus, { staleTime: 5_000 });
+  const health = useBackendHealth();
   const [initializing, setInitializing] = useState(false);
   const [initNote, setInitNote] = useState<string | null>(null);
 
@@ -25,7 +25,7 @@ export function SiteHeader() {
       setInitNote(
         `${r.transactions.toLocaleString()} tx · ${r.features} features · fraud ${(r.fraud_ratio * 100).toFixed(2)}% · ${r.graph_nodes} graph nodes`,
       );
-      await status.refetch();
+      await health.refetch();
     } catch (e) {
       setInitNote(e instanceof Error ? e.message : "init failed");
     } finally {
@@ -33,7 +33,26 @@ export function SiteHeader() {
     }
   };
 
-  const ready = status.data?.ready;
+  const getStatusDisplay = () => {
+    switch (health.state) {
+      case "checking":
+        return { tone: "muted" as const, text: "checking engine…" };
+      case "waking":
+        return {
+          tone: "warn" as const,
+          text: `waking engine (${health.wakingSeconds}s)…`,
+        };
+      case "ready":
+        return { tone: "defense" as const, text: "twin ready" };
+      case "uninitialized":
+        return { tone: "warn" as const, text: "twin not initialised" };
+      case "offline":
+      default:
+        return { tone: "attack" as const, text: "backend offline" };
+    }
+  };
+
+  const statusDisplay = getStatusDisplay();
 
   return (
     <header className="sticky top-0 z-40 border-b border-rule bg-paper/90 backdrop-blur-md">
@@ -60,28 +79,32 @@ export function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <Tag tone={ready ? "defense" : status.error ? "attack" : "warn"}>
-            {status.isLoading
-              ? "checking"
-              : status.error
-                ? "backend offline"
-                : ready
-                  ? "twin ready"
-                  : "not initialised"}
-          </Tag>
-          <Button onClick={runInit} disabled={initializing} className="text-[10px] sm:text-[11px] px-2.5 sm:px-3 py-1.5 sm:py-2">
+          <Tag tone={statusDisplay.tone}>{statusDisplay.text}</Tag>
+          <Button
+            onClick={runInit}
+            disabled={initializing || health.state === "offline" || health.state === "waking"}
+            className="text-[10px] sm:text-[11px] px-2.5 sm:px-3 py-1.5 sm:py-2"
+          >
             {initializing ? "building…" : "Run /api/init"}
           </Button>
         </div>
       </div>
+
+      {health.state === "waking" ? (
+        <p className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2 font-mono text-[11px] text-warn">
+          Spinning up from Render cold start. This typically takes 30–60 seconds; nothing is broken.
+        </p>
+      ) : null}
+
       {initNote ? (
         <p className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2 font-mono text-[11px] text-muted-foreground">
           {initNote}
         </p>
       ) : null}
-      {status.error ? (
-        <p className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2 font-mono text-[11px] text-muted-foreground">
-          No backend at {API_BASE} — set VITE_API_BASE_URL to point elsewhere.
+
+      {health.state === "offline" && health.error ? (
+        <p className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-2 font-mono text-[11px] text-attack">
+          Backend unreachable at {health.baseUrl} ({health.error.message}) — set VITE_API_BASE_URL to point elsewhere.
         </p>
       ) : null}
     </header>
@@ -89,6 +112,7 @@ export function SiteHeader() {
 }
 
 export function SiteFooter() {
+  const health = useBackendHealth();
   return (
     <footer className="mt-24 border-t border-rule">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-baseline justify-between gap-4 px-6 py-8">
@@ -97,7 +121,7 @@ export function SiteFooter() {
           backed by offline artifacts state so, and print the backend&rsquo;s own note when an
           artifact has not been generated.
         </p>
-        <Mono className="text-muted-foreground">{API_BASE}</Mono>
+        <Mono className="text-muted-foreground">{health.baseUrl}</Mono>
       </div>
     </footer>
   );

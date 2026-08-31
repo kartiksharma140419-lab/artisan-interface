@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AmbientStrip } from "@/components/prom/AmbientStrip";
+import { AttackerPanel } from "@/components/prom/AttackerPanel";
 import { ComboStrip } from "@/components/prom/ComboStrip";
 import { DemoNarrative } from "@/components/prom/DemoNarrative";
 import { Eyebrow, Mono, Tag } from "@/components/prom/Panel";
@@ -48,6 +49,15 @@ function AttackPage() {
 
       {/* Main Attack Workspace */}
       <div className="mx-auto max-w-[1400px] px-4 sm:px-6 space-y-8 sm:space-y-10">
+        {/* Red Team Typologies & Injector Panel */}
+        <section>
+          <div className="mb-3 flex items-baseline justify-between">
+            <Eyebrow>Tactical Attack Vectors</Eyebrow>
+            <Mono className="text-muted-foreground">interactive typology control</Mono>
+          </div>
+          <AttackerPanel />
+        </section>
+
         {/* The 3-Beat Decontaminated Cycle */}
         <section>
           <div className="mb-3 flex items-baseline justify-between">

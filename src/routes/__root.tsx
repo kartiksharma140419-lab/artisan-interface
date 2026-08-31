@@ -82,22 +82,36 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "theme-color", content: "#08080c" },
       { title: "PROMETHEUS — Adversarial Fraud Simulation & Forensic Intelligence Twin" },
       {
         name: "description",
         content:
           "Closed-loop financial digital twin, decontaminated adversarial attack benchmarks, deep-path structured scoring, and PCAT agentic payment rails.",
       },
+      {
+        name: "keywords",
+        content:
+          "Prometheus, adversarial fraud twin, AMLSim, PCAT, payment constrained agent token, graph neural networks, structured weights, financial forensic intelligence",
+      },
       { name: "author", content: "Prometheus Intelligence" },
+      { name: "robots", content: "index, follow" },
       { property: "og:title", content: "PROMETHEUS — Adversarial Fraud Simulation Twin" },
       {
         property: "og:description",
         content:
-          "Zero-mock adversarial fraud simulation twin, decontaminated evaluations, and PCAT agentic payment verification.",
+          "Zero-mock adversarial fraud simulation twin, decontaminated evaluations, deep-path structured scoring, and PCAT agentic payment verification.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "PROMETHEUS Fraud Twin" },
+      { property: "og:locale", content: "en_US" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "PROMETHEUS — Fraud Twin" },
+      { name: "twitter:title", content: "PROMETHEUS — Adversarial Fraud Simulation Twin" },
+      {
+        name: "twitter:description",
+        content:
+          "Closed-loop financial digital twin, decontaminated adversarial attack benchmarks, deep-path structured scoring, and PCAT agentic payment rails.",
+      },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
