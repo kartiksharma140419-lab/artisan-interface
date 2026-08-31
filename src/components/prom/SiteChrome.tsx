@@ -15,7 +15,12 @@ const NAV = [
 ] as const;
 
 export function SiteHeader() {
-  const status = useApi(["status"], apiStatus, { staleTime: 5_000 });
+  const health = useBackendHealth();
+  const status = useApi(["status"], apiStatus, {
+    staleTime: 5_000,
+    enabled: health.phase === "ready",
+  });
+
   const [initializing, setInitializing] = useState(false);
   const [initNote, setInitNote] = useState<string | null>(null);
 
