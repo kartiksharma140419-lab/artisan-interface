@@ -53,13 +53,15 @@ export function Stat({
 }: {
   label: string;
   value: ReactNode;
-  hint?: string;
-  tone?: "ink" | "attack" | "defense" | "muted";
+  hint?: string | undefined;
+  tone?: "ink" | "attack" | "defense" | "muted" | "warn" | undefined;
 }) {
   const toneClass =
     tone === "attack"
       ? "text-attack font-bold"
-      : tone === "defense"
+      : tone === "warn"
+        ? "text-warn font-bold"
+        : tone === "defense"
         ? "text-defense font-bold"
         : tone === "muted"
           ? "text-muted-foreground"

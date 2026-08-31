@@ -1,41 +1,20 @@
 /**
  * PROMETHEUS backend contract (kartik branch).
  * Every shape here was transcribed from the verified endpoint contract.
- * Base URL is configurable: set VITE_API_BASE_URL to point at a deployed backend.
+ * The base URL lives ONLY in ./api-config; every call goes through ./api-client.
  */
 
-export const API_BASE =
-  (import.meta.env["VITE_API_BASE_URL"] as string | undefined)?.replace(/\/$/, "") ||
-  "http://localhost:8000";
+import { apiFetch, ApiError } from "./api-client";
+import { API_BASE, TIMEOUT } from "./api-config";
 
-export class ApiError extends Error {
-  status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-  }
-}
+export { API_BASE, TIMEOUT, ApiError, apiFetch };
+export { apiHealthz } from "./api-client";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    });
-  } catch {
-    throw new ApiError(`Backend unreachable at ${API_BASE}`, 0);
-  }
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new ApiError(`${res.status} ${res.statusText}${body ? ` — ${body.slice(0, 240)}` : ""}`, res.status);
-  }
-  return (await res.json()) as T;
-}
+export const get = <T,>(path: string, timeoutMs: number = TIMEOUT.read) =>
+  apiFetch<T>(path, { timeoutMs });
+export const post = <T,>(path: string, body?: unknown, timeoutMs: number = TIMEOUT.compute) =>
+  apiFetch<T>(path, { method: "POST", body: body ?? {}, timeoutMs });
 
-export const get = <T,>(path: string) => request<T>(path);
-export const post = <T,>(path: string, body?: unknown) =>
-  request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) });
 
 /* ---------- shared ---------- */
 
@@ -63,8 +42,8 @@ export interface StatusResponse {
 }
 
 export const apiInit = (body?: { seed?: number; num_accounts?: number; num_steps?: number }) =>
-  post<InitResponse>("/api/init", body ?? {});
-export const apiStatus = () => get<StatusResponse>("/api/status");
+  post<InitResponse>("/api/init", body ?? {}, TIMEOUT.init);
+export const apiStatus = () => get<StatusResponse>("/api/status", TIMEOUT.health);
 
 /* ---------- ambient stream ---------- */
 
@@ -118,7 +97,7 @@ export interface DemoRunResponse {
   };
 }
 
-export const apiDemoRun = () => post<DemoRunResponse>("/api/demo/run");
+export const apiDemoRun = () => post<DemoRunResponse>("/api/demo/run", {}, TIMEOUT.demoRun);
 
 /* ---------- knowledge graph ---------- */
 
@@ -176,11 +155,11 @@ export interface Trajectory {
 }
 
 export const apiGraph = (params: {
-  filter?: "overview" | "fraud" | "trajectory" | "ego" | "all";
-  trajectory_id?: string;
-  node_id?: string;
-  max_nodes?: number;
-  max_edges?: number;
+  filter?: "overview" | "fraud" | "trajectory" | "ego" | "all" | undefined;
+  trajectory_id?: string | undefined;
+  node_id?: string | undefined;
+  max_nodes?: number | undefined;
+  max_edges?: number | undefined;
 }) => {
   const q = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => v !== undefined && v !== "" && q.set(k, String(v)));
