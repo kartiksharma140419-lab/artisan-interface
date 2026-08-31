@@ -10,13 +10,21 @@ import { Button, Mono, Tag } from "./Panel";
  */
 export function AmbientStrip() {
   const [events, setEvents] = useState<StepEvent[]>([]);
-  const [state, setState] = useState<"connecting" | "live" | "done" | "error">("connecting");
+  const [state, setState] = useState<"connecting" | "waking" | "live" | "done" | "error">(
+    "connecting",
+  );
   const [attack, setAttack] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
     const es = new EventSource(`${API_BASE}/api/stream`);
     esRef.current = es;
+
+    // A cold Render instance can hold the connection open for 30–50s before the
+    // first frame arrives. Say so instead of showing a bare inactive label.
+    const wakeTimer = setTimeout(() => {
+      setState((s) => (s === "connecting" ? "waking" : s));
+    }, 4_000);
 
     const onStep = (e: MessageEvent) => {
       try {
@@ -33,12 +41,23 @@ export function AmbientStrip() {
 
     es.addEventListener("step", onStep as EventListener);
     es.addEventListener("init", () => setState("live"));
-    es.addEventListener("done", () => setState("done"));
+    es.addEventListener("done", () => {
+      setState("done");
+      // The run naturally ends after 30 steps — close so EventSource does not
+      // auto-reconnect into a fresh run behind the user's back.
+      es.close();
+    });
     es.addEventListener("message", onStep as EventListener);
     es.onerror = () => setState((s) => (s === "done" ? s : "error"));
 
-    return () => es.close();
+    // Always release the connection on unmount / route change.
+    return () => {
+      clearTimeout(wakeTimer);
+      es.close();
+      esRef.current = null;
+    };
   }, []);
+
 
   const last = events[events.length - 1];
   const points = events.map((e) => e.peak_score ?? 0);
