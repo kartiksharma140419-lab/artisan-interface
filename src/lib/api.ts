@@ -155,11 +155,11 @@ export interface Trajectory {
 }
 
 export const apiGraph = (params: {
-  filter?: "overview" | "fraud" | "trajectory" | "ego" | "all";
-  trajectory_id?: string;
-  node_id?: string;
-  max_nodes?: number;
-  max_edges?: number;
+  filter?: "overview" | "fraud" | "trajectory" | "ego" | "all" | undefined;
+  trajectory_id?: string | undefined;
+  node_id?: string | undefined;
+  max_nodes?: number | undefined;
+  max_edges?: number | undefined;
 }) => {
   const q = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => v !== undefined && v !== "" && q.set(k, String(v)));
